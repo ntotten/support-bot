@@ -5,6 +5,7 @@
   "author": "Nathan Totten <ntotten@auth0.com>",
   "description": "Auth0 customer support bot",
   "dependencies": {
+    "hubot": "^2.13.2",
     "hubot-slack": "^3.3.0"
   },
   "engines": {
