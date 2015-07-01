@@ -1,0 +1,13 @@
+{
+  "name": "support",
+  "version": "0.0.0",
+  "private": true,
+  "author": "Nathan Totten <ntotten@auth0.com>",
+  "description": "Auth0 customer support bot",
+  "dependencies": {
+    "hubot-slack": "^3.3.0"
+  },
+  "engines": {
+    "node": "0.10.x"
+  }
+}
