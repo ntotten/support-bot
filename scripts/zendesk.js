@@ -30,6 +30,7 @@ const defaultTicketSubject = 'Slack chat with @%s';
 const nobodyAvailible = util.format('<@%s> It doesn\'t look like anyone is available right now to help out in chat. If you would like, you can open a support ticket by simply replying *open ticket* and we will follow up over email. You may also open a support ticket by emailing %s.', '%s', process.env.SUPPORT_EMAIL);
 const slackbotUsername = 'support';
 const SUPPORT_STATUS_KEY = 'slack_support_status';
+const LAST_MESSAGED_USER_KEY = 'slack_support_last_messaged_';
 
 var job;
 var messageQueue = [];
@@ -297,8 +298,15 @@ module.exports = (robot) => {
           delete channel[userId];
           let user = robot.brain.userForId(userId);
           let text = util.format(nobodyAvailible, user.name);
-          postSlackMessage(channelId, text, slackbotUsername, process.env.SLACK_ICON_URL)
-          .catch(console.log);
+          var lastMessagedUserTime = robot.brain.get(LAST_MESSAGED_USER_KEY + userId);
+          // Only message users at most once every 12 hours
+          if (!!lastMessagedUserTime || lastMessagedUserTime < moment().subtype(12, 'minute').valueOf()) {
+            postSlackMessage(channelId, text, slackbotUsername, process.env.SLACK_ICON_URL)
+            .then(() => {
+               robot.brain.set(LAST_MESSAGED_USER_KEY + userId, moment().valueOf());
+            })
+            .catch(console.log);
+          }
         }
       }
       if (Object.keys(channels[channelId]).length === 0) {
