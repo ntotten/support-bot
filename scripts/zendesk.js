@@ -277,14 +277,20 @@ module.exports = (robot) => {
     }
   });
 
-  function onJobRun() {
-    console.log('support job running');
+  function getChannels() {
     let channels = robot.brain.get(SUPPORT_STATUS_KEY);
     let nextMessage = messageQueue.pop();
     while (nextMessage) {
       processMessage(channels, nextMessage);
       nextMessage = messageQueue.pop();
     }
+    console.log(channels);
+    return channels;
+  }
+
+  function onJobRun() {
+    console.log('support job running');
+    let channels = getChannels();
     for (let channelId in channels) {
       let channel = channels[channelId];
       for (let userId in channel) {
@@ -302,12 +308,21 @@ module.exports = (robot) => {
         delete channels[channelId];
       }
     }
+    console.log('saving channels');
+    console.log(channels);
     robot.brain.set(SUPPORT_STATUS_KEY, channels);
   }
 
   function onJobStopped() {
     console.log('Support job stopped');
   }
+
+  // Try to catch any unsaved messages and save them.
+  process.on('SIGTERM', function() {
+    console.log('saving channels before shutdown.');
+    var channels = getChannels();
+    robot.brain.set(SUPPORT_STATUS_KEY, channels);
+  });
 
   job = new CronJob('00 * * * * *', onJobRun, onJobStopped, true);
 };
