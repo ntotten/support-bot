@@ -20,14 +20,14 @@ var CronJob = require('cron').CronJob;
 
 const zendeskRootUrl = util.format('https://%s.zendesk.com/api/v2', process.env.ZENDESK_TENANT);
 const slackRootUrl = 'https://slack.com/api';
-const ticketOpenedMessage = '<@%s> A support ticket (%s) has been opened for your request. We contact you through the email address associated with your Slack account as soon as possible.';
+const ticketOpenedMessage = '<@%s> A support ticket (%s) has been opened for your request. We will contact you through the email address associated with your Slack account as soon as possible.';
 const ticketCreatedMessage = util.format('Ticket created: <https://%s.zendesk.com/agent/tickets/%s|%s>', process.env.ZENDESK_TENANT);
 const userErrorMessage = util.format('An error has occurred. If you would like to open a support ticket please email %s', process.env.SUPPORT_EMAIL);
 const noCommentsErrorMessage = 'No recent comments found for <@%s>. You must provide the issue text.';
 const invalidSlackUserErrorMessage = 'Could not find slack user.';
 const noUserProvidedErrorMessage = 'Cannot open ticket. User was not provided.';
-const defaultTicketSubject = 'Slack chat with %s';
-const nobodyAvailible = util.format('<@%s> It doesn\'t look like anyone is available right now to help out in chat. If you would like you can open a support ticket by simply replying *open ticket* and we will follow up over email.\nYou may also open a support ticket by emailing %s.', '%s', process.env.SUPPORT_EMAIL);
+const defaultTicketSubject = 'Slack chat with @%s';
+const nobodyAvailible = util.format('<@%s> It doesn\'t look like anyone is available right now to help out in chat. If you would like, you can open a support ticket by simply replying *open ticket* and we will follow up over email. You may also open a support ticket by emailing %s.', '%s', process.env.SUPPORT_EMAIL);
 const slackbotUsername = 'support';
 const SUPPORT_STATUS_KEY = 'slack_support_status';
 
@@ -198,10 +198,10 @@ module.exports = (robot) => {
     };
     return openTicket(options)
     .then(text => {
-      res.sendStatus(200);
+      res.status(200).end();
     }).catch(function(err) {
       console.log(err);
-      res.sendStatus(500);
+      res.status(500).end();
     });
   });
 
@@ -250,10 +250,10 @@ module.exports = (robot) => {
 
     return openTicket(options)
     .then(text => {
-      return res.sendStatus(200);
+      return res.status(200).end();
     }).catch(err => {
       console.log(err);
-      return res.sendStatus(500);
+      return res.status(500).end();
     });
 
   });
