@@ -197,11 +197,13 @@ module.exports = (robot) => {
       user: robot.brain.userForId(res.message.user.id)
     };
     return openTicket(options)
-    .then(text => {
-      res.status(200).end();
-    }).catch(function(err) {
+    .catch(function(err) {
+      var message = userErrorMessage;
+      if (typeof err === 'string') {
+        message = err;
+      }
       console.log(err);
-      res.status(500).end();
+      res.reply(message);
     });
   });
 
@@ -214,9 +216,7 @@ module.exports = (robot) => {
       user: robot.brain.userForId(matches[1]),
     };
     return openTicket(options)
-    .then(text => {
-      res.reply(text);
-    }).catch(function(err) {
+    .catch(function(err) {
       var message = userErrorMessage;
       if (typeof err === 'string') {
         message = err;
@@ -250,10 +250,14 @@ module.exports = (robot) => {
 
     return openTicket(options)
     .then(text => {
-      return res.status(200).end();
+      return res.status(200).send(text);
     }).catch(err => {
+      var message = userErrorMessage;
+      if (typeof err === 'string') {
+        message = err;
+      }
       console.log(err);
-      return res.status(500).end();
+      return res.status(500).send(message);
     });
 
   });
