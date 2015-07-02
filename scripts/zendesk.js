@@ -2,8 +2,16 @@
 //  Opens Zendesk support tickets
 //
 // Configuration:
+//  HUBOT_SLACK_TOKEN
+//  SLACK_COMMAND_TOKEN
+//  SLACK_ICON_URL
+//  SUPPORT_EMAIL
+//  ZENDESK_API_EMAIL
+//  ZENDESK_API_TOKEN
+//  ZENDESK_TENANT
 //  COMPANY_EMAIL_DOMAIN - @domain.com format of the company email domain
-//  AUTORESPOND_ROOMS - Coma sperated list of rooms to run the autoresponder in
+//  AUTORESPOND_ROOMS - Comma sperated list of rooms to run the autoresponder in
+//  AUTORESPOND_TIMEOUT - Minutes to wait until autoresponding to messages
 
 var request = require('request');
 var moment = require('moment');
@@ -19,7 +27,7 @@ const noCommentsErrorMessage = 'No recent comments found for <@%s>. You must pro
 const invalidSlackUserErrorMessage = 'Could not find slack user.';
 const noUserProvidedErrorMessage = 'Cannot open ticket. User was not provided.';
 const defaultTicketSubject = 'Slack chat with %s';
-const nobodyAvailible = util.format('<@%s> It doesn\'t look like anyone is availible right now to help out in chat. If you would like you can open a support ticket by simply replying `open ticket` and we will follow up over email. You may also open a support ticket by emailing %s', '%s', process.env.SUPPORT_EMAIL);
+const nobodyAvailible = util.format('<@%s> It doesn\'t look like anyone is available right now to help out in chat. If you would like you can open a support ticket by simply replying **open ticket** and we will follow up over email. You may also open a support ticket by emailing %s.', '%s', process.env.SUPPORT_EMAIL);
 const slackbotUsername = 'support';
 const SUPPORT_STATUS_KEY = 'slack_support_status';
 
@@ -282,7 +290,7 @@ module.exports = (robot) => {
       for (let userId in channel) {
         let time = channel[userId];
         // Check if the user hasn't been responded to in time period
-        if (time < moment().subtract(2, 'minute').valueOf()) {
+        if (time < moment().subtract(process.env.AUTORESPOND_TIMEOUT, 'minute').valueOf()) {
           delete channel[userId];
           let user = robot.brain.userForId(userId);
           let text = util.format(nobodyAvailible, user.name);
