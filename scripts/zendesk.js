@@ -27,7 +27,7 @@ const noCommentsErrorMessage = 'No recent comments found for <@%s>. You must pro
 const invalidSlackUserErrorMessage = 'Could not find slack user.';
 const noUserProvidedErrorMessage = 'Cannot open ticket. User was not provided.';
 const defaultTicketSubject = 'Slack chat with %s';
-const nobodyAvailible = util.format('<@%s> It doesn\'t look like anyone is available right now to help out in chat. If you would like you can open a support ticket by simply replying **open ticket** and we will follow up over email. You may also open a support ticket by emailing %s.', '%s', process.env.SUPPORT_EMAIL);
+const nobodyAvailible = util.format('<@%s> It doesn\'t look like anyone is available right now to help out in chat. If you would like you can open a support ticket by simply replying *open ticket* and we will follow up over email.\nYou may also open a support ticket by emailing %s.', '%s', process.env.SUPPORT_EMAIL);
 const slackbotUsername = 'support';
 const SUPPORT_STATUS_KEY = 'slack_support_status';
 
@@ -198,14 +198,10 @@ module.exports = (robot) => {
     };
     return openTicket(options)
     .then(text => {
-      res.reply(text);
+      res.sendStatus(200);
     }).catch(function(err) {
-      var message = userErrorMessage;
-      if (typeof err === 'string') {
-        message = err;
-      }
       console.log(err);
-      res.reply(message);
+      res.sendStatus(500);
     });
   });
 
@@ -254,24 +250,22 @@ module.exports = (robot) => {
 
     return openTicket(options)
     .then(text => {
-      return res.status(200).send(text);
+      return res.sendStatus(200);
     }).catch(err => {
-      var message = userErrorMessage;
-      if (typeof err === 'string') {
-        message = err;
-      }
       console.log(err);
-      return res.status(500).send(message);
+      return res.sendStatus(500);
     });
 
   });
 
+  // Catch all messages for autoresponder
   robot.catchAll(function(res) {
-    // Catch all messages that we will do autoresponses for
+    // Only certain rooms get responders
     if (process.env.AUTORESPOND_ROOMS.indexOf(res.message.user.room) < 0) {
       return;
     }
 
+    // Only handle normal user messages
     if (res.message.rawMessage.type === 'message' && !res.message.rawMessage.subtype) {
       messageQueue.push(res.message);
     }
@@ -284,7 +278,6 @@ module.exports = (robot) => {
       processMessage(channels, nextMessage);
       nextMessage = messageQueue.pop();
     }
-    console.log(channels);
     return channels;
   }
 
@@ -308,8 +301,6 @@ module.exports = (robot) => {
         delete channels[channelId];
       }
     }
-    console.log('saving channels');
-    console.log(channels);
     robot.brain.set(SUPPORT_STATUS_KEY, channels);
   }
 
