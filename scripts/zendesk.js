@@ -300,7 +300,7 @@ module.exports = (robot) => {
           let text = util.format(nobodyAvailible, user.name);
           var lastMessagedUserTime = robot.brain.get(LAST_MESSAGED_USER_KEY + userId);
           // Only message users at most once every 12 hours
-          if (!!lastMessagedUserTime || lastMessagedUserTime < moment().subtype(12, 'minute').valueOf()) {
+          if (!lastMessagedUserTime || lastMessagedUserTime < moment().subtype(12, 'minute').valueOf()) {
             postSlackMessage(channelId, text, slackbotUsername, process.env.SLACK_ICON_URL)
             .then(() => {
                robot.brain.set(LAST_MESSAGED_USER_KEY + userId, moment().valueOf());
