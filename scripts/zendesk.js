@@ -16,7 +16,6 @@
 var request = require('request');
 var moment = require('moment');
 var util = require('util');
-var CronJob = require('cron').CronJob;
 
 const zendeskRootUrl = util.format('https://%s.zendesk.com/api/v2', process.env.ZENDESK_TENANT);
 const slackRootUrl = 'https://slack.com/api';
@@ -32,7 +31,6 @@ const slackbotUsername = 'support';
 const SUPPORT_STATUS_KEY = 'slack_support_status';
 const LAST_MESSAGED_USER_KEY = 'slack_support_last_messaged_';
 
-var job;
 var messageQueue = [];
 
 module.exports = (robot) => {
@@ -286,7 +284,7 @@ module.exports = (robot) => {
     return channels;
   }
 
-  function onJobRun() {
+  function runScheduledJob() {
     console.log('support job running');
     let channels = getChannels();
     for (let channelId in channels) {
@@ -301,11 +299,14 @@ module.exports = (robot) => {
           var lastMessagedUserTime = robot.brain.get(LAST_MESSAGED_USER_KEY + userId);
           // Only message users at most once every 12 hours
           if (!lastMessagedUserTime || lastMessagedUserTime < moment().subtype(12, 'minute').valueOf()) {
+            console.log('Sending message.');
             postSlackMessage(channelId, text, slackbotUsername, process.env.SLACK_ICON_URL)
             .then(() => {
                robot.brain.set(LAST_MESSAGED_USER_KEY + userId, moment().valueOf());
             })
             .catch(console.log);
+          } else {
+            console.log('Not sending message, too many messages to user in allowed time.');
           }
         }
       }
@@ -316,9 +317,7 @@ module.exports = (robot) => {
     robot.brain.set(SUPPORT_STATUS_KEY, channels);
   }
 
-  function onJobStopped() {
-    console.log('Support job stopped');
-  }
+  setTimeout(runScheduledJob, 60000);
 
   // Try to catch any unsaved messages and save them.
   process.on('SIGTERM', function() {
@@ -326,6 +325,4 @@ module.exports = (robot) => {
     var channels = getChannels();
     robot.brain.set(SUPPORT_STATUS_KEY, channels);
   });
-
-  job = new CronJob('00 * * * * *', onJobRun, onJobStopped, true);
 };
