@@ -317,7 +317,7 @@ module.exports = (robot) => {
     robot.brain.set(SUPPORT_STATUS_KEY, channels);
   }
 
-  setTimeout(runScheduledJob, 60000);
+  setInterval(runScheduledJob, 60000);
 
   // Try to catch any unsaved messages and save them.
   process.on('SIGTERM', function() {
