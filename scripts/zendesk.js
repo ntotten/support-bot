@@ -175,6 +175,20 @@ module.exports = (robot) => {
   }
 
   function processMessage(rooms, message) {
+    // Only certain rooms get responders
+    if (process.env.AUTORESPOND_ROOMS.indexOf(message.channel_name) < 0) {
+      console.log('Skipping message. Not responding to channel: ' + message.channel_name);
+      return;
+    }
+
+
+
+    // Only handle normal user messages
+    if (message.type === 'message' && !message.subtype) {
+      console.log('Skipping message as it is not a user generated message');
+      return;
+    }
+
     if (message.is_agent) {
       // Clear cache of unanswered message. somebody from company is in the room
       if (rooms) {
@@ -262,25 +276,17 @@ module.exports = (robot) => {
 
   // Catch all messages for autoresponder
   robot.catchAll(function(res) {
-    // Only certain rooms get responders
-    if (process.env.AUTORESPOND_ROOMS.indexOf(res.message.user.room) < 0) {
-      console.log('Skipping message. Not responding to channel: ' + res.message.user.room);
-      return;
-    }
-
-
-
-    // Only handle normal user messages
-    if (res.message.rawMessage.type === 'message' && !res.message.rawMessage.subtype) {
-      var message = {
-        user_id: res.message.user.id,
-        email_address: res.message.user.email_address,
-        timestamp: moment.unix(res.message.ts).valueOf(),
-        channel_id: message.rawMessage.channel,
-        is_agent: !!(message.email_address && message.email_address.indexOf(process.env.COMPANY_EMAIL_DOMAIN) > 0)
-      };
-      messageQueue.push(message);
-    }
+    var message = {
+      user_id: res.message.user.id,
+      email_address: res.message.user.email_address,
+      timestamp: moment.unix(res.message.ts).valueOf(),
+      channel_id: message.rawMessage.channel,
+      channel_name: res.message.user.room,
+      type: res.message.rawMessage.type,
+      subtype: res.message.rawMessage.subtype,
+      is_agent: !!(message.email_address && message.email_address.indexOf(process.env.COMPANY_EMAIL_DOMAIN) > 0)
+    };
+    messageQueue.push(message);
   });
 
   function getChannels() {
