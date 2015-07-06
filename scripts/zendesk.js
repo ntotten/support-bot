@@ -38,7 +38,7 @@ module.exports = (robot) => {
   function getSlackMessages(channelId, oldestTime) {
     return new Promise((resolve, reject) => {
       request({
-        url: util.format('%s/channels.history?token=%s&channel=%s&oldest=%s', slackRootUrl, process.env.HUBOT_SLACK_TOKEN, channelId, oldestTime),
+        url: util.format('%s/channels.history?token=%s&channel=%s&oldest=%s&count=%s', slackRootUrl, process.env.HUBOT_SLACK_TOKEN, channelId, oldestTime, 1000),
         method: 'GET'
       }, function(err, response, body) {
         if (err || response.statusCode !== 200) {
@@ -127,7 +127,7 @@ module.exports = (robot) => {
       return Promise.reject(noUserProvidedErrorMessage);
     }
 
-    let oldest = moment().subtract(12, 'hour').format('X');
+    let oldest = moment().subtract(3, 'hour').format('X');
     return getSlackMessages(options.channel_id, oldest)
     .then(function(messageResult) {
       return buildTicketBody(messageResult.messages, user);
