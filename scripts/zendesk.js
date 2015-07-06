@@ -186,7 +186,6 @@ module.exports = (robot) => {
       // If the message is a regular user messages, and not from company store it
       let users = rooms[message.rawMessage.channel] = rooms[message.rawMessage.channel] || {};
       users[message.user.id] = moment.unix(message.rawMessage.ts).valueOf();
-      robot.brain.set(SUPPORT_STATUS_KEY, rooms);
     }
   }
 
@@ -265,6 +264,7 @@ module.exports = (robot) => {
   robot.catchAll(function(res) {
     // Only certain rooms get responders
     if (process.env.AUTORESPOND_ROOMS.indexOf(res.message.user.room) < 0) {
+      console.log('Skipping message. Not responding to channel: ' + res.message.user.room);
       return;
     }
 
