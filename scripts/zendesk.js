@@ -279,7 +279,7 @@ module.exports = (robot) => {
         channel_id: message.rawMessage.channel,
         is_agent: !!(message.email_address && message.email_address.indexOf(process.env.COMPANY_EMAIL_DOMAIN) > 0)
       };
-      messageQueue.push(res.message);
+      messageQueue.push(message);
     }
   });
 
