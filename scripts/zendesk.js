@@ -13,12 +13,11 @@
 //  AUTORESPOND_ROOMS - Comma sperated list of rooms to run the autoresponder in
 //  AUTORESPOND_TIMEOUT - Minutes to wait until autoresponding to messages
 
-var request = require('request');
-var moment = require('moment');
-var util = require('util');
+import util from 'util';
+import moment from 'moment';
+import { postSupportTicket } from '../lib/zendesk-client';
+import { getSlackMessages, postSlackMessage } from '../lib/slack-client';
 
-const zendeskRootUrl = util.format('https://%s.zendesk.com/api/v2', process.env.ZENDESK_TENANT);
-const slackRootUrl = 'https://slack.com/api';
 const ticketOpenedMessage = '<@%s> A support ticket (%s) has been opened for your request. We will contact you through the email address associated with your Slack account as soon as possible.';
 const ticketCreatedMessage = util.format('Ticket created: <https://%s.zendesk.com/agent/tickets/%s|%s>', process.env.ZENDESK_TENANT);
 const userErrorMessage = util.format('An error has occurred. If you would like to open a support ticket please email %s', process.env.SUPPORT_EMAIL);
@@ -34,57 +33,6 @@ const LAST_MESSAGED_USER_KEY = 'slack_support_last_messaged_';
 var messageQueue = [];
 
 module.exports = (robot) => {
-
-  function getSlackMessages(channelId, oldestTime) {
-    return new Promise((resolve, reject) => {
-      request({
-        url: util.format('%s/channels.history?token=%s&channel=%s&oldest=%s&count=%s', slackRootUrl, process.env.HUBOT_SLACK_TOKEN, channelId, oldestTime, 1000),
-        method: 'GET'
-      }, function(err, response, body) {
-        if (err || response.statusCode !== 200) {
-          console.log('slack/channels.history: ' + JSON.stringify(body));
-          return reject(err || 'Status code: ' + response.statusCode);
-        }
-        var result = JSON.parse(body);
-        return resolve(result);
-      });
-    });
-  }
-
-  function postSupportTicket(ticket) {
-    return new Promise((resolve, reject) => {
-      let token = new Buffer(process.env.ZENDESK_API_EMAIL + '/token:' + process.env.ZENDESK_API_TOKEN).toString('base64');
-      request({
-        url: util.format('%s/tickets.json', zendeskRootUrl),
-        method: 'POST',
-        headers: {
-          'Authorization': 'Basic ' + token
-        },
-        json: { ticket: ticket }
-      }, function(err, response, body) {
-        if (err || response.statusCode !== 201) {
-          console.log('zendesk/postticket: ' + JSON.stringify(body));
-          return reject(err || 'Status code: ' + response.statusCode);
-        }
-        resolve(body);
-      });
-    });
-  }
-
-  function postSlackMessage(channelId, text, username, iconUrl) {
-    return new Promise((resolve, reject) => {
-      request({
-        url: util.format('%s/chat.postMessage?token=%s&channel=%s&text=%s&username=%s&icon_url=%s', slackRootUrl, process.env.HUBOT_SLACK_TOKEN, channelId, text, username, iconUrl),
-        method: 'POST',
-      }, function(err, response, body) {
-        if (err || response.statusCode !== 200) {
-          console.log('slack/chat.postMessage: ' + JSON.stringify(body));
-          return reject(err || 'Status code: ' + response.statusCode);
-        }
-        return resolve(body);
-      });
-    });
-  }
 
   function buildTicketBody(messages, user) {
 
