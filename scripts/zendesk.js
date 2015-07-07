@@ -132,76 +132,76 @@ module.exports = (robot) => {
     });
   }
 
-  // robot.hear(/open ticket$/i, function(res) {
-  //   var options = {
-  //     channel_id: res.message.rawMessage.channel,
-  //     user: robot.brain.userForId(res.message.user.id)
-  //   };
-  //   return openTicket(options)
-  //   .catch(function(err) {
-  //     var message = userErrorMessage;
-  //     if (typeof err === 'string') {
-  //       message = err;
-  //     }
-  //     console.log(err);
-  //     res.reply(message);
-  //   });
-  // });
-  //
-  // robot.hear(/open ticket for \@([^\s]+) (.*)$/i, function(res) {
-  //   var rawText = res.message.rawText;
-  //   var matches = rawText.match(/open ticket for <@([^\s]+)> (.*)$/i);
-  //   var options = {
-  //     command_text: matches[2],
-  //     channel_id: res.message.rawMessage.channel,
-  //     user: robot.brain.userForId(matches[1]),
-  //   };
-  //   return openTicket(options)
-  //   .catch(function(err) {
-  //     var message = userErrorMessage;
-  //     if (typeof err === 'string') {
-  //       message = err;
-  //     }
-  //     console.log(err);
-  //     res.reply(message);
-  //   });
-  // });
-  //
-  // robot.router.post('/hubot/zendesk/ticket', function(req, res) {
-  //   if (req.body.token !== process.env.SLACK_COMMAND_TOKEN) {
-  //     return res.status(500).send('Invalid token');
-  //   }
-  //
-  //   var rawText = req.body.text.trim();
-  //   var commandText;
-  //   var username;
-  //   if (rawText.indexOf(' ') > -1) {
-  //     var matches = rawText.match(/\@([^\s]+) (.*)$/i);
-  //     commandText = matches[2];
-  //     username = matches[1];
-  //   } else {
-  //     username = rawText.replace('@', '');
-  //   }
-  //
-  //   var options = {
-  //     command_text: commandText,
-  //     channel_id: req.body.channel_id,
-  //     user: robot.brain.userForName(username),
-  //   };
-  //
-  //   return openTicket(options)
-  //   .then(text => {
-  //     return res.status(200).send(text);
-  //   }).catch(err => {
-  //     var message = userErrorMessage;
-  //     if (typeof err === 'string') {
-  //       message = err;
-  //     }
-  //     console.log(err);
-  //     return res.status(500).send(message);
-  //   });
-  //
-  // });
+  robot.hear(/open ticket$/i, function(res) {
+    var options = {
+      channel_id: res.message.rawMessage.channel,
+      user: robot.brain.userForId(res.message.user.id)
+    };
+    return openTicket(options)
+    .catch(function(err) {
+      var message = userErrorMessage;
+      if (typeof err === 'string') {
+        message = err;
+      }
+      console.log(err);
+      res.reply(message);
+    });
+  });
+
+  robot.hear(/open ticket for \@([^\s]+) (.*)$/i, function(res) {
+    var rawText = res.message.rawText;
+    var matches = rawText.match(/open ticket for <@([^\s]+)> (.*)$/i);
+    var options = {
+      command_text: matches[2],
+      channel_id: res.message.rawMessage.channel,
+      user: robot.brain.userForId(matches[1]),
+    };
+    return openTicket(options)
+    .catch(function(err) {
+      var message = userErrorMessage;
+      if (typeof err === 'string') {
+        message = err;
+      }
+      console.log(err);
+      res.reply(message);
+    });
+  });
+
+  robot.router.post('/hubot/zendesk/ticket', function(req, res) {
+    if (req.body.token !== process.env.SLACK_COMMAND_TOKEN) {
+      return res.status(500).send('Invalid token');
+    }
+
+    var rawText = req.body.text.trim();
+    var commandText;
+    var username;
+    if (rawText.indexOf(' ') > -1) {
+      var matches = rawText.match(/\@([^\s]+) (.*)$/i);
+      commandText = matches[2];
+      username = matches[1];
+    } else {
+      username = rawText.replace('@', '');
+    }
+
+    var options = {
+      command_text: commandText,
+      channel_id: req.body.channel_id,
+      user: robot.brain.userForName(username),
+    };
+
+    return openTicket(options)
+    .then(text => {
+      return res.status(200).send(text);
+    }).catch(err => {
+      var message = userErrorMessage;
+      if (typeof err === 'string') {
+        message = err;
+      }
+      console.log(err);
+      return res.status(500).send(message);
+    });
+
+  });
 
   // Catch all messages for autoresponder
   robot.catchAll(function(res) {
