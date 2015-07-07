@@ -1,1 +1,1 @@
-web: bin/hubot -a slack -p $PORT
+web: bin/hubot -a slack

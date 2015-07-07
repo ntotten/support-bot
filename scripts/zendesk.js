@@ -11,13 +11,19 @@
 //  ZENDESK_TENANT
 //  COMPANY_EMAIL_DOMAIN - @domain.com format of the company email domain
 //  AUTORESPOND_ROOMS - Comma sperated list of rooms to run the autoresponder in
-//  AUTORESPOND_TIMEOUT - Minutes to wait until autoresponding to messages
+//  AUTORESPOND_JOB_INTERVAL - Seconds between job runs
+//  AUTORESPOND_TIMEOUT - Seconds to wait until autoresponding to messages
+//  AUTORESPOND_AGENT_WAIT_TIMEOUT - Seconds to wait before replying after agent activity
+//  AUTORESPOND_CONVERSATION_TIMEOUT - Seconds to ignore a message after an agent message
+//  AUTORESPOND_USER_LIMIT_TIMEOUT - Seconds between maximum number messages per user in time
+//  AUTORESPOND_MINIMUM_REPLY_TIMEOUT - Minimum seconds to wait before a message and autoreply
+
 
 import util from 'util';
 import moment from 'moment';
 import { postSupportTicket } from '../lib/zendesk-client';
 import { getSlackMessages, postSlackMessage } from '../lib/slack-client';
-import SupportAutoresponer from '../lib/support-autoresponder';
+import autoResponder from '../lib/support-autoresponder';
 
 const ticketOpenedMessage = '<@%s> A support ticket (%s) has been opened for your request. We will contact you through the email address associated with your Slack account as soon as possible.';
 const ticketCreatedMessage = util.format('Ticket created: <https://%s.zendesk.com/agent/tickets/%s|%s>', process.env.ZENDESK_TENANT);
@@ -31,11 +37,12 @@ const slackbotUsername = 'support';
 
 module.exports = (robot) => {
 
-  var supportAutoresponer = new SupportAutoresponer(robot.brain, (channelId, user) => {
+  var responder = autoResponder(robot.brain, (message) => {
+    let user = robot.brain.userForId(message.user_id);
     let text = util.format(nobodyAvailible, user.name);
-    return postSlackMessage(channelId, text, slackbotUsername, process.env.SLACK_ICON_URL);
+    return postSlackMessage(message.channel_id, text, slackbotUsername, process.env.SLACK_ICON_URL);
   });
-  supportAutoresponer.start();
+  responder.start();
 
   function buildTicketBody(messages, user) {
 
@@ -125,91 +132,79 @@ module.exports = (robot) => {
     });
   }
 
-  robot.hear(/open ticket$/i, function(res) {
-    var options = {
-      channel_id: res.message.rawMessage.channel,
-      user: robot.brain.userForId(res.message.user.id)
-    };
-    return openTicket(options)
-    .catch(function(err) {
-      var message = userErrorMessage;
-      if (typeof err === 'string') {
-        message = err;
-      }
-      console.log(err);
-      res.reply(message);
-    });
-  });
-
-  robot.hear(/open ticket for \@([^\s]+) (.*)$/i, function(res) {
-    var rawText = res.message.rawText;
-    var matches = rawText.match(/open ticket for <@([^\s]+)> (.*)$/i);
-    var options = {
-      command_text: matches[2],
-      channel_id: res.message.rawMessage.channel,
-      user: robot.brain.userForId(matches[1]),
-    };
-    return openTicket(options)
-    .catch(function(err) {
-      var message = userErrorMessage;
-      if (typeof err === 'string') {
-        message = err;
-      }
-      console.log(err);
-      res.reply(message);
-    });
-  });
-
-  robot.router.post('/hubot/zendesk/ticket', function(req, res) {
-    if (req.body.token !== process.env.SLACK_COMMAND_TOKEN) {
-      return res.status(500).send('Invalid token');
-    }
-
-    var rawText = req.body.text.trim();
-    var commandText;
-    var username;
-    if (rawText.indexOf(' ') > -1) {
-      var matches = rawText.match(/\@([^\s]+) (.*)$/i);
-      commandText = matches[2];
-      username = matches[1];
-    } else {
-      username = rawText.replace('@', '');
-    }
-
-    var options = {
-      command_text: commandText,
-      channel_id: req.body.channel_id,
-      user: robot.brain.userForName(username),
-    };
-
-    return openTicket(options)
-    .then(text => {
-      return res.status(200).send(text);
-    }).catch(err => {
-      var message = userErrorMessage;
-      if (typeof err === 'string') {
-        message = err;
-      }
-      console.log(err);
-      return res.status(500).send(message);
-    });
-
-  });
+  // robot.hear(/open ticket$/i, function(res) {
+  //   var options = {
+  //     channel_id: res.message.rawMessage.channel,
+  //     user: robot.brain.userForId(res.message.user.id)
+  //   };
+  //   return openTicket(options)
+  //   .catch(function(err) {
+  //     var message = userErrorMessage;
+  //     if (typeof err === 'string') {
+  //       message = err;
+  //     }
+  //     console.log(err);
+  //     res.reply(message);
+  //   });
+  // });
+  //
+  // robot.hear(/open ticket for \@([^\s]+) (.*)$/i, function(res) {
+  //   var rawText = res.message.rawText;
+  //   var matches = rawText.match(/open ticket for <@([^\s]+)> (.*)$/i);
+  //   var options = {
+  //     command_text: matches[2],
+  //     channel_id: res.message.rawMessage.channel,
+  //     user: robot.brain.userForId(matches[1]),
+  //   };
+  //   return openTicket(options)
+  //   .catch(function(err) {
+  //     var message = userErrorMessage;
+  //     if (typeof err === 'string') {
+  //       message = err;
+  //     }
+  //     console.log(err);
+  //     res.reply(message);
+  //   });
+  // });
+  //
+  // robot.router.post('/hubot/zendesk/ticket', function(req, res) {
+  //   if (req.body.token !== process.env.SLACK_COMMAND_TOKEN) {
+  //     return res.status(500).send('Invalid token');
+  //   }
+  //
+  //   var rawText = req.body.text.trim();
+  //   var commandText;
+  //   var username;
+  //   if (rawText.indexOf(' ') > -1) {
+  //     var matches = rawText.match(/\@([^\s]+) (.*)$/i);
+  //     commandText = matches[2];
+  //     username = matches[1];
+  //   } else {
+  //     username = rawText.replace('@', '');
+  //   }
+  //
+  //   var options = {
+  //     command_text: commandText,
+  //     channel_id: req.body.channel_id,
+  //     user: robot.brain.userForName(username),
+  //   };
+  //
+  //   return openTicket(options)
+  //   .then(text => {
+  //     return res.status(200).send(text);
+  //   }).catch(err => {
+  //     var message = userErrorMessage;
+  //     if (typeof err === 'string') {
+  //       message = err;
+  //     }
+  //     console.log(err);
+  //     return res.status(500).send(message);
+  //   });
+  //
+  // });
 
   // Catch all messages for autoresponder
   robot.catchAll(function(res) {
-    var message = {
-      id: res.message.id,
-      user_id: res.message.user.id,
-      email_address: res.message.user.email_address,
-      timestamp: moment.unix(res.message.rawMessage.ts).valueOf(),
-      channel_id: res.message.rawMessage.channel,
-      channel_name: res.message.user.room,
-      type: res.message.rawMessage.type,
-      subtype: res.message.rawMessage.subtype,
-      //text: res.message.rawText,
-      is_agent: !!(res.message.user.email_address && res.message.user.email_address.indexOf(process.env.COMPANY_EMAIL_DOMAIN) > 0)
-    };
-    supportAutoresponer.enqueMessage(message);
+    responder.handleResponse(res);
   });
 };
