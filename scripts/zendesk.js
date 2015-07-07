@@ -17,6 +17,7 @@ import util from 'util';
 import moment from 'moment';
 import { postSupportTicket } from '../lib/zendesk-client';
 import { getSlackMessages, postSlackMessage } from '../lib/slack-client';
+import SupportAutoresponer from '../lib/support-autoresponder';
 
 const ticketOpenedMessage = '<@%s> A support ticket (%s) has been opened for your request. We will contact you through the email address associated with your Slack account as soon as possible.';
 const ticketCreatedMessage = util.format('Ticket created: <https://%s.zendesk.com/agent/tickets/%s|%s>', process.env.ZENDESK_TENANT);
@@ -27,12 +28,14 @@ const noUserProvidedErrorMessage = 'Cannot open ticket. User was not provided.';
 const defaultTicketSubject = 'Slack chat with @%s';
 const nobodyAvailible = util.format('<@%s> It doesn\'t look like anyone is available right now to help out in chat. If you would like, you can open a support ticket by simply replying *open ticket* and we will follow up over email. You may also open a support ticket by emailing %s.', '%s', process.env.SUPPORT_EMAIL);
 const slackbotUsername = 'support';
-const SUPPORT_STATUS_KEY = 'slack_support_status';
-const LAST_MESSAGED_USER_KEY = 'slack_support_last_messaged_';
-
-var messageQueue = [];
 
 module.exports = (robot) => {
+
+  var supportAutoresponer = new SupportAutoresponer(robot.brain, (channelId, user) => {
+    let text = util.format(nobodyAvailible, user.name);
+    return postSlackMessage(channelId, text, slackbotUsername, process.env.SLACK_ICON_URL);
+  });
+  supportAutoresponer.start();
 
   function buildTicketBody(messages, user) {
 
@@ -122,34 +125,6 @@ module.exports = (robot) => {
     });
   }
 
-  function processMessage(rooms, message) {
-    console.log('Processing message ' + message.id);
-
-    // Only certain rooms get responders
-    if (process.env.AUTORESPOND_ROOMS.indexOf(message.channel_name) < 0) {
-      console.log('Skipping message. Not responding to channel: ' + message.channel_name);
-      return;
-    }
-    // Only handle normal user messages
-    if (message.type === 'message' && message.subtype) {
-      console.log('Skipping message as it is not a user generated message');
-      return;
-    }
-
-    if (message.is_agent) {
-      console.log('Clear cache of unanswered message. somebody from company is in the room');
-      if (rooms) {
-        if (rooms[message.channel_id]) {
-          delete rooms[message.channel_id];
-        }
-      }
-    } else {
-      console.log('The message is a regular user messages, and not from company store it');
-      let users = rooms[message.channel_id] = rooms[message.channel_id] || {};
-      users[message.user_id] = message.timestamp;
-    }
-  }
-
   robot.hear(/open ticket$/i, function(res) {
     var options = {
       channel_id: res.message.rawMessage.channel,
@@ -235,58 +210,6 @@ module.exports = (robot) => {
       //text: res.message.rawText,
       is_agent: !!(res.message.user.email_address && res.message.user.email_address.indexOf(process.env.COMPANY_EMAIL_DOMAIN) > 0)
     };
-    messageQueue.push(message);
-  });
-
-  function getChannels() {
-    let channels = robot.brain.get(SUPPORT_STATUS_KEY);
-    let nextMessage = messageQueue.pop();
-    while (nextMessage) {
-      processMessage(channels, nextMessage);
-      nextMessage = messageQueue.pop();
-    }
-    return channels;
-  }
-
-  function runScheduledJob() {
-    console.log('support job running');
-    let channels = getChannels();
-    for (let channelId in channels) {
-      let channel = channels[channelId];
-      for (let userId in channel) {
-        let time = channel[userId];
-        // Check if the user hasn't been responded to in time period
-        if (time < moment().subtract(process.env.AUTORESPOND_TIMEOUT, 'minute').valueOf()) {
-          delete channel[userId];
-          let user = robot.brain.userForId(userId);
-          let text = util.format(nobodyAvailible, user.name);
-          var lastMessagedUserTime = robot.brain.get(LAST_MESSAGED_USER_KEY + userId);
-          // Only message users at most once every 12 hours
-          if (!lastMessagedUserTime || lastMessagedUserTime < moment().subtract(12, 'minute').valueOf()) {
-            console.log('Sending message.');
-            postSlackMessage(channelId, text, slackbotUsername, process.env.SLACK_ICON_URL)
-            .then(() => {
-               robot.brain.set(LAST_MESSAGED_USER_KEY + userId, moment().valueOf());
-            })
-            .catch(console.log);
-          } else {
-            console.log('Not sending message, too many messages to user in allowed time.');
-          }
-        }
-      }
-      if (Object.keys(channels[channelId]).length === 0) {
-        delete channels[channelId];
-      }
-    }
-    robot.brain.set(SUPPORT_STATUS_KEY, channels);
-  }
-
-  setInterval(runScheduledJob, 60000);
-
-  // Try to catch any unsaved messages and save them.
-  process.on('SIGTERM', function() {
-    console.log('saving channels before shutdown.');
-    var channels = getChannels();
-    robot.brain.set(SUPPORT_STATUS_KEY, channels);
+    supportAutoresponer.enqueMessage(message);
   });
 };
