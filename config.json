@@ -1,11 +1,13 @@
 {
   "AUTORESPOND_OFFICE_HOURS": [
     { "start": "00:00", "end": "00:00" },
-    { "start": "06:00", "end": "18:00" },
-    { "start": "06:00", "end": "18:00" },
-    { "start": "06:00", "end": "18:00" },
-    { "start": "06:00", "end": "18:00" },
-    { "start": "06:00", "end": "18:00" },
+    { "start": "13:00", "end": "01:00" },
+    { "start": "13:00", "end": "01:00" },
+    { "start": "13:00", "end": "01:00" },
+    { "start": "13:00", "end": "01:00" },
+    { "start": "13:00", "end": "01:00" },
     { "start": "00:00", "end": "00:00" }
-  ]
+  ],
+  "AUTORESPOND_MESSAGE": "<@%s> It doesn't look like anyone is available right now to help out in chat. If you would like, you can open a support ticket by simply replying *open ticket* and we will follow up over email. You may also open a support ticket by emailing %s.",
+  "WELCOME_MESSAGE": "Welcome to the Auth0 support chat. Generally, we are available to chat between 6AM - 6PM PST (13:00-01:00 GMT). \n\n If you type a message and don't get a response you can convert your message to a support ticket by simply replying *open ticket* and we’ll follow up over email as soon as we can. You may also open a support ticket any time by emailing %s."
 }

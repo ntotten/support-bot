@@ -9,7 +9,8 @@ nconf.file({ file: './config.json' })
        AUTORESPOND_AGENT_WAIT_TIMEOUT: 600,
        AUTORESPOND_CONVERSATION_TIMEOUT: 120,
        AUTORESPOND_USER_LIMIT_TIMEOUT: 36000,
-       AUTORESPOND_MINIMUM_REPLY_TIMEOUT: 15
+       AUTORESPOND_MINIMUM_REPLY_TIMEOUT: 15,
+       WELCOME_ROOMS: 'general'
      });
 
 export default nconf;

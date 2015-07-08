@@ -1,3 +1,22 @@
+// Description:
+//  Automatically responds to messages with a support message
+//
+// Configuration:
+//  HUBOT_SLACK_TOKEN
+//  SLACK_COMMAND_TOKEN
+//  SLACK_ICON_URL
+//  SUPPORT_EMAIL
+//  COMPANY_EMAIL_DOMAIN - @domain.com format of the company email domain
+//  AUTORESPOND_ROOMS - Comma sperated list of rooms to run the autoresponder in
+//  AUTORESPOND_JOB_INTERVAL - Seconds between job runs
+//  AUTORESPOND_TIMEOUT - Seconds to wait until autoresponding to messages
+//  AUTORESPOND_AGENT_WAIT_TIMEOUT - Seconds to wait before replying after agent activity
+//  AUTORESPOND_CONVERSATION_TIMEOUT - Seconds to ignore a message after an agent message
+//  AUTORESPOND_USER_LIMIT_TIMEOUT - Seconds between maximum number messages per user in time
+//  AUTORESPOND_MINIMUM_REPLY_TIMEOUT - Minimum seconds to wait before a message and autoreply
+//  AUTORESPOND_OFFICE_HOURS - JSON object of office hours by day of week (see: config.json)
+//  AUTORESPOND_MESSAGE - The text of the autorespond message
+
 import moment from 'moment';
 import _ from 'lodash';
 import Log from 'log';
@@ -9,7 +28,7 @@ const CHANNELS_KEY = 'support_channels';
 const USER_MESSAGE_KEY = 'user_message_';
 const MESSAGE_MENTION_REGEX = /^<@.*>/i;
 const slackbotUsername = 'support';
-const nobodyAvailible = util.format('<@%s> It doesn\'t look like anyone is available right now to help out in chat. If you would like, you can open a support ticket by simply replying *open ticket* and we will follow up over email. You may also open a support ticket by emailing %s.', '%s', config.get('SUPPORT_EMAIL'));
+const nobodyAvailible = util.format(config.get('AUTORESPOND_MESSAGE'), '%s', config.get('SUPPORT_EMAIL'));
 
 /*
 Structure of the channel data:

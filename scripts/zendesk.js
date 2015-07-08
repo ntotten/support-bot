@@ -9,15 +9,6 @@
 //  ZENDESK_API_EMAIL
 //  ZENDESK_API_TOKEN
 //  ZENDESK_TENANT
-//  COMPANY_EMAIL_DOMAIN - @domain.com format of the company email domain
-//  AUTORESPOND_ROOMS - Comma sperated list of rooms to run the autoresponder in
-//  AUTORESPOND_JOB_INTERVAL - Seconds between job runs
-//  AUTORESPOND_TIMEOUT - Seconds to wait until autoresponding to messages
-//  AUTORESPOND_AGENT_WAIT_TIMEOUT - Seconds to wait before replying after agent activity
-//  AUTORESPOND_CONVERSATION_TIMEOUT - Seconds to ignore a message after an agent message
-//  AUTORESPOND_USER_LIMIT_TIMEOUT - Seconds between maximum number messages per user in time
-//  AUTORESPOND_MINIMUM_REPLY_TIMEOUT - Minimum seconds to wait before a message and autoreply
-//  AUTORESPOND_OFFICE_HOURS - JSON object of office hours by day of week (see: config.json)
 
 
 import util from 'util';
