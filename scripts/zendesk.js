@@ -26,7 +26,6 @@ import Log from 'log';
 import config from '../config';
 import { postSupportTicket } from '../lib/zendesk-client';
 import { getSlackMessages, postSlackMessage } from '../lib/slack-client';
-import autoResponder from '../lib/support-autoresponder';
 
 const ticketOpenedMessage = '<@%s> A support ticket (%s) has been opened for your request. We will contact you through the email address associated with your Slack account as soon as possible.';
 const ticketCreatedMessage = util.format('Ticket created: <https://%s.zendesk.com/agent/tickets/%s|%s>', config.get('ZENDESK_TENANT'));
@@ -34,18 +33,11 @@ const userErrorMessage = util.format('An error has occurred. If you would like t
 const noCommentsErrorMessage = 'No recent comments found for <@%s>. You must provide the issue text.';
 const noUserProvidedErrorMessage = 'Cannot open ticket. User was not provided.';
 const defaultTicketSubject = 'Slack chat with @%s';
-const nobodyAvailible = util.format('<@%s> It doesn\'t look like anyone is available right now to help out in chat. If you would like, you can open a support ticket by simply replying *open ticket* and we will follow up over email. You may also open a support ticket by emailing %s.', '%s', config.get('SUPPORT_EMAIL'));
 const slackbotUsername = 'support';
 
 var log = new Log('zendesk');
 
 module.exports = (robot) => {
-
-  var responder = autoResponder(robot.brain, (message) => {
-    let text = util.format(nobodyAvailible, message.user_id);
-    return postSlackMessage(message.channel_id, text, slackbotUsername, config.get('SLACK_ICON_URL'));
-  });
-  responder.start();
 
   function buildTicketBody(messages) {
     let body = [];
@@ -201,10 +193,5 @@ module.exports = (robot) => {
       return res.status(500).send(message);
     });
 
-  });
-
-  // Catch all messages for autoresponder
-  robot.catchAll(function(res) {
-    responder.handleResponse(res);
   });
 };
