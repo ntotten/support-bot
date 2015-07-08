@@ -24,57 +24,56 @@ import moment from 'moment';
 import { postSupportTicket } from '../lib/zendesk-client';
 import { getSlackMessages, postSlackMessage } from '../lib/slack-client';
 import autoResponder from '../lib/support-autoresponder';
+import Log from 'log';
 
 const ticketOpenedMessage = '<@%s> A support ticket (%s) has been opened for your request. We will contact you through the email address associated with your Slack account as soon as possible.';
 const ticketCreatedMessage = util.format('Ticket created: <https://%s.zendesk.com/agent/tickets/%s|%s>', process.env.ZENDESK_TENANT);
 const userErrorMessage = util.format('An error has occurred. If you would like to open a support ticket please email %s', process.env.SUPPORT_EMAIL);
 const noCommentsErrorMessage = 'No recent comments found for <@%s>. You must provide the issue text.';
-const invalidSlackUserErrorMessage = 'Could not find slack user.';
 const noUserProvidedErrorMessage = 'Cannot open ticket. User was not provided.';
 const defaultTicketSubject = 'Slack chat with @%s';
 const nobodyAvailible = util.format('<@%s> It doesn\'t look like anyone is available right now to help out in chat. If you would like, you can open a support ticket by simply replying *open ticket* and we will follow up over email. You may also open a support ticket by emailing %s.', '%s', process.env.SUPPORT_EMAIL);
 const slackbotUsername = 'support';
 
+var log = new Log('zendesk');
+
 module.exports = (robot) => {
 
   var responder = autoResponder(robot.brain, (message) => {
-    let user = robot.brain.userForId(message.user_id);
-    let text = util.format(nobodyAvailible, user.name);
+    let text = util.format(nobodyAvailible, message.user_id);
     return postSlackMessage(message.channel_id, text, slackbotUsername, process.env.SLACK_ICON_URL);
   });
   responder.start();
 
-  function buildTicketBody(messages, user) {
-
-    let getMessageText = function(user, ts, text) {
-      return '@' + user + ' (' + moment.unix(ts).format('LTS') + '): ' + text;
-    };
-    let p = [];
-    let startsWith1 = '<' + user.name;
-    let startsWith2 = '<@' + user.id;
+  function buildTicketBody(messages) {
+    let body = [];
     for (let i = messages.length - 1; i >= 0; i--) {
       let message = messages[i];
       if (!message.hasOwnProperty('subtype')) { // ignore all subtypes as they are system/bot messages
-        if (message.user === user.id) {
-          p.push(getMessageText(message.user, message.ts, message.text));
-        } else if ((message.text.indexOf(startsWith1) === 0 || message.text.indexOf(startsWith2) === 0)) {
-          p.push(Promise.resolve(message).then(message => {
-            let messageUser = robot.brain.userForId(message.user);
-            if (messageUser) {
-              return getMessageText(messageUser.name, message.ts, message.text.substring(message.text.indexOf('>: ') + 2));
-            } else {
-              return Promise.reject(invalidSlackUserErrorMessage);
-            }
-          }));
-        }
+        let user = robot.brain.userForId(message.user);
+
+        // Replace any username mentions in ID format with readable ones
+        let re = /<(@U.*?)>/;
+        let rawText = message.text;
+        let m;
+        do {
+          m = re.exec(rawText);
+          if (m) {
+            var user_id = m[1].substring(1);
+            let mentionedUser = robot.brain.userForId(user_id) || { name: user_id };
+            rawText = rawText.replace(m[0], '@' + mentionedUser.name);
+          }
+        } while (m);
+
+        let text =  util.format('@%s (%s): %s',
+          user ? user.name : 'unknown',
+          moment.unix(message.ts).format('LTS'),
+          rawText);
+        body.push(text);
       }
     }
 
-    return Promise.all(p)
-    .then(values => {
-      var body = values.join('\n');
-      return body.replace(user.id, user.name).replace('<@' + user.name + '>', '@' + user.name);
-    });
+    return body.join('\n');
   }
 
   function openTicket(options) {
@@ -121,7 +120,7 @@ module.exports = (robot) => {
     })
     .then(postSupportTicket)
     .then(ticket => {
-      let text = util.format(ticketOpenedMessage, user.name, ticket.ticket.id);
+      let text = util.format(ticketOpenedMessage, user.id, ticket.ticket.id);
       return postSlackMessage(options.channel_id, text, slackbotUsername, process.env.SLACK_ICON_URL)
       .then(function() {
         return Promise.resolve(ticket);
@@ -132,20 +131,27 @@ module.exports = (robot) => {
     });
   }
 
-  robot.hear(/open ticket$/i, function(res) {
-    var options = {
-      channel_id: res.message.rawMessage.channel,
-      user: robot.brain.userForId(res.message.user.id)
-    };
+  function handleOpenTicket(res, options) {
+    log.info('Opening ticket for @%s', options.user.name);
+
     return openTicket(options)
     .catch(function(err) {
       var message = userErrorMessage;
       if (typeof err === 'string') {
         message = err;
       }
-      console.log(err);
+      log.error(err);
       res.reply(message);
     });
+  }
+
+  robot.hear(/open ticket$/i, function(res) {
+    var options = {
+      channel_id: res.message.rawMessage.channel,
+      user: robot.brain.userForId(res.message.user.id)
+    };
+
+    return handleOpenTicket(res, options);
   });
 
   robot.hear(/open ticket for \@([^\s]+) (.*)$/i, function(res) {
@@ -156,15 +162,7 @@ module.exports = (robot) => {
       channel_id: res.message.rawMessage.channel,
       user: robot.brain.userForId(matches[1]),
     };
-    return openTicket(options)
-    .catch(function(err) {
-      var message = userErrorMessage;
-      if (typeof err === 'string') {
-        message = err;
-      }
-      console.log(err);
-      res.reply(message);
-    });
+    return handleOpenTicket(res, options);
   });
 
   robot.router.post('/hubot/zendesk/ticket', function(req, res) {
@@ -197,7 +195,7 @@ module.exports = (robot) => {
       if (typeof err === 'string') {
         message = err;
       }
-      console.log(err);
+      log.error(err);
       return res.status(500).send(message);
     });
 
