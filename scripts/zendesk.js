@@ -17,22 +17,24 @@
 //  AUTORESPOND_CONVERSATION_TIMEOUT - Seconds to ignore a message after an agent message
 //  AUTORESPOND_USER_LIMIT_TIMEOUT - Seconds between maximum number messages per user in time
 //  AUTORESPOND_MINIMUM_REPLY_TIMEOUT - Minimum seconds to wait before a message and autoreply
+//  AUTORESPOND_OFFICE_HOURS - JSON object of office hours by day of week (see: config.json)
 
 
 import util from 'util';
 import moment from 'moment';
+import Log from 'log';
+import config from '../config';
 import { postSupportTicket } from '../lib/zendesk-client';
 import { getSlackMessages, postSlackMessage } from '../lib/slack-client';
 import autoResponder from '../lib/support-autoresponder';
-import Log from 'log';
 
 const ticketOpenedMessage = '<@%s> A support ticket (%s) has been opened for your request. We will contact you through the email address associated with your Slack account as soon as possible.';
-const ticketCreatedMessage = util.format('Ticket created: <https://%s.zendesk.com/agent/tickets/%s|%s>', process.env.ZENDESK_TENANT);
-const userErrorMessage = util.format('An error has occurred. If you would like to open a support ticket please email %s', process.env.SUPPORT_EMAIL);
+const ticketCreatedMessage = util.format('Ticket created: <https://%s.zendesk.com/agent/tickets/%s|%s>', config.get('ZENDESK_TENANT'));
+const userErrorMessage = util.format('An error has occurred. If you would like to open a support ticket please email %s', config.get('SUPPORT_EMAIL'));
 const noCommentsErrorMessage = 'No recent comments found for <@%s>. You must provide the issue text.';
 const noUserProvidedErrorMessage = 'Cannot open ticket. User was not provided.';
 const defaultTicketSubject = 'Slack chat with @%s';
-const nobodyAvailible = util.format('<@%s> It doesn\'t look like anyone is available right now to help out in chat. If you would like, you can open a support ticket by simply replying *open ticket* and we will follow up over email. You may also open a support ticket by emailing %s.', '%s', process.env.SUPPORT_EMAIL);
+const nobodyAvailible = util.format('<@%s> It doesn\'t look like anyone is available right now to help out in chat. If you would like, you can open a support ticket by simply replying *open ticket* and we will follow up over email. You may also open a support ticket by emailing %s.', '%s', config.get('SUPPORT_EMAIL'));
 const slackbotUsername = 'support';
 
 var log = new Log('zendesk');
@@ -41,7 +43,7 @@ module.exports = (robot) => {
 
   var responder = autoResponder(robot.brain, (message) => {
     let text = util.format(nobodyAvailible, message.user_id);
-    return postSlackMessage(message.channel_id, text, slackbotUsername, process.env.SLACK_ICON_URL);
+    return postSlackMessage(message.channel_id, text, slackbotUsername, config.get('SLACK_ICON_URL'));
   });
   responder.start();
 
@@ -121,7 +123,7 @@ module.exports = (robot) => {
     .then(postSupportTicket)
     .then(ticket => {
       let text = util.format(ticketOpenedMessage, user.id, ticket.ticket.id);
-      return postSlackMessage(options.channel_id, text, slackbotUsername, process.env.SLACK_ICON_URL)
+      return postSlackMessage(options.channel_id, text, slackbotUsername, config.get('SLACK_ICON_URL'))
       .then(function() {
         return Promise.resolve(ticket);
       });
@@ -166,7 +168,7 @@ module.exports = (robot) => {
   });
 
   robot.router.post('/hubot/zendesk/ticket', function(req, res) {
-    if (req.body.token !== process.env.SLACK_COMMAND_TOKEN) {
+    if (req.body.token !== config.get('SLACK_COMMAND_TOKEN')) {
       return res.status(500).send('Invalid token');
     }
 
