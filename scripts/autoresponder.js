@@ -215,27 +215,27 @@ module.exports = (robot) => {
   }
 
   // Catch all messages for autoresponder
-  robot.catchAll(function(res) {
-    if (!res.message.rawMessage) {
-      // Some types of messages dont include rawMessage
-      // these are system messages and we don't care about them
-      return;
-    }
+  // robot.catchAll(function(res) {
+  //   if (!res.message.rawMessage) {
+  //     // Some types of messages dont include rawMessage
+  //     // these are system messages and we don't care about them
+  //     return;
+  //   }
+  //
+  //   var message = {
+  //     id: res.message.id,
+  //     user_id: res.message.user.id,
+  //     email_address: res.message.user.email_address,
+  //     channel_name: res.message.user.room,
+  //     timestamp: moment.unix(res.message.rawMessage.ts).valueOf(),
+  //     channel_id: res.message.rawMessage.channel,
+  //     type: res.message.rawMessage.type,
+  //     subtype: res.message.rawMessage.subtype,
+  //     text: res.message.rawText,
+  //     is_agent: !!(res.message.user.email_address && res.message.user.email_address.indexOf(config.get('COMPANY_EMAIL_DOMAIN')) > 0)
+  //   };
+  //   enqueMessage(message);
+  // });
 
-    var message = {
-      id: res.message.id,
-      user_id: res.message.user.id,
-      email_address: res.message.user.email_address,
-      channel_name: res.message.user.room,
-      timestamp: moment.unix(res.message.rawMessage.ts).valueOf(),
-      channel_id: res.message.rawMessage.channel,
-      type: res.message.rawMessage.type,
-      subtype: res.message.rawMessage.subtype,
-      text: res.message.rawText,
-      is_agent: !!(res.message.user.email_address && res.message.user.email_address.indexOf(config.get('COMPANY_EMAIL_DOMAIN')) > 0)
-    };
-    enqueMessage(message);
-  });
-
-  setInterval(runScheduledJob, config.get('AUTORESPOND_JOB_INTERVAL') * 1000);
+  //setInterval(runScheduledJob, config.get('AUTORESPOND_JOB_INTERVAL') * 1000);
 };
